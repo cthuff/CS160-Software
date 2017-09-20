@@ -1,0 +1,225 @@
+<?php
+    include( 'utilities.php' );      
+?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+	<title>Software QA and Testing</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
+	<style type="text/css" media="screen">@import "css/basic.css";</style>
+	<style type="text/css" media="screen">@import "css/tabs.css";</style>
+        <style type="text/css" media="screen">@import "css/tooltip.css";</style>
+        <script src="./javascript-utils.js"></script>
+</head>
+
+<body>
+	<h1>Comp150B - Software QA and Testing</h1>
+  <div id="header">
+	<ul id="primary">
+		<li><a href="index.php">Home</a></li>
+		<li><span>Manage Log Files</span></li>
+		<li><a href="requests.php">Request Reliability</a></li>
+		<li><a href="users.php">User Reliability</a></li>
+		<li><a href="misc.php">Request Timing</a></li>
+        <li><a href="transactions.php">Transaction Log</a></li>
+		<li><a href="urlvisits.php">URL Visits</a></li>
+	</ul>
+	</div>
+	<div id="main">
+		<div id="contents">
+			<h2>Manage Log Files</h2>
+			<br />	
+<?php
+			if ( $_GET['error'] ) {
+?>
+			<p class="note">Error</p>
+			<p>
+				<div style="border: 1px solid black; background-color: #FFCCCC;">
+				&nbsp;<?=$_GET['error']?>
+				</div>
+			</p>
+			<br />
+<?php
+			}
+?>
+			<p class="note" onmouseover="tooltip.show('Here you can upload log files.', 200);"
+                                        onmouseout="tooltip.hide();">Upload Logs</p>	
+			<p>
+        <?php
+        
+        $numEntriesAdded = 0;
+        $numSQLErrors = 0;
+
+        if ( isset($_POST['submit']) ) {
+                if ($_FILES["file"]["error"] > 0) 
+                {
+                        print "Error uploading file: " . $_FILES["file"]["error"] . "<br />";
+                } 
+                else if(!is_log_file_csv($_FILES["file"]["name"]))
+                {
+                        print "Error: File '" . $_FILES["file"]["name"] . "' is not a .csv file.<br />";
+                }
+                else if(does_log_file_exist_in_db($_FILES["file"]["name"]))
+                {
+                        print "Error: A file with the name '" . $_FILES["file"]["name"] . "' already exists.<br />";
+                }
+                else
+                {
+                        $data = file_get_contents( $_FILES["file"]["tmp_name"] );
+                        $lines = split( "\n", $data );
+ 
+                        // Go through each line in the input file, and attempt to add them to the DB
+                        for($i=0; $i < sizeof($lines); $i++)
+                        {
+                            // Get the next line.
+                            $line = $lines[$i];
+ 
+                            // Check if it is blank.  If it is, just skip this line silently.
+                            $isBlank = (trim($line) == "");
+                            if($isBlank)
+                            {
+                                continue;
+                            }
+                            
+                            // The line isn't blank, so split the line on each comma, and validate each field in the line
+                            $array = split( ",", $line );
+                            $validationError = validate_row_contents($line, $array);
+ 
+                            // If all the fields in this line are valid, then $validationError will not be set and we can
+                            // insert these values into the DB.  Note that we use the function mysql_real_escape_string()
+                            // in order to make sure all special characters are escaped and there is no funny business going on.
+                            if(!isset($validationError))
+                            {
+                                $query_string = "INSERT INTO log_entry(log_file, id, unique_id, date, time, url, status, referrer) ";
+                                $query_string .= "VALUES(\"";
+                                $query_string .= mysql_real_escape_string($_FILES["file"]["name"]) . "\", ";
+                                $query_string .= mysql_real_escape_string($array[0]) . ", \"";
+                                $query_string .= mysql_real_escape_string($array[1]) . "\", \"";
+                                $query_string .= mysql_real_escape_string($array[2]) . "\", \"";
+                                $query_string .= mysql_real_escape_string($array[3]) . "\", \"";
+                                $query_string .= mysql_real_escape_string($array[4]) . "\", \"";
+                                $query_string .= mysql_real_escape_string($array[5]) . "\", \"";
+                                $query_string .= mysql_real_escape_string($array[6]) . "\")";
+                                //print $query_string . "<br/>";
+                                if(mysql_query($query_string))
+                                {
+                                     $numEntriesAdded++;
+                                }
+                                else
+                                {
+                                    $numSQLErrors++;
+                                    $sqlErrors .= "SQL Error #" . $numSQLErrors . ": " . mysql_error() . "<br />";
+                                }
+                            }
+                            else
+                            {
+                                $numSQLErrors++;
+                                $sqlErrors .= $validationError;
+                            }
+                        }
+
+                        // Print a summary how many entries we added, and how many errors we encountered.
+                        print "Added " . $numEntriesAdded . " entries from log file '" . $_FILES["file"]["name"] . "'";
+                        if(isset($sqlErrors))
+                        {
+                            $_SESSION['sqlErrors'] = $sqlErrors;
+                            print " (with " . $numSQLErrors . " <a href=\"#\" onclick=\"toggleError();\">error(s)</a>)";
+							print "<br /><div id=\"error_details\" style=\"display:none; border: 1px solid black; background-color: #FFCCCC;\">" . $sqlErrors . "</div>";
+                        }
+                        print "<br />";
+                }
+        }
+        ?>
+        <form action="logs.php" method="post" enctype="multipart/form-data">
+          <label for="file">Upload log file:</label>
+          <input type="file" name="file" id="file" />
+          <br />
+          <input type="submit" name="submit" value="Submit" />
+        </form>
+			</p>
+			<br />
+      <p class="note">Delete Logs</p>
+      <p>
+        <?php
+        if ( isset($_POST['submitDelete']) ) {
+          if($_POST['logFiles'] != "")
+          {
+            $query_string = "DELETE FROM log_entry WHERE log_file = '" . mysql_real_escape_string($_POST['logFiles']) . "'";
+            if(mysql_query($query_string))
+            {
+              print "Log entries from file " . $_POST['logFiles'] . " deleted!<br/>";
+
+              // Check if the current log session variable is set to the log we just deleted.
+              // If so, we need to reset the active log file.
+              if(isset($_SESSION['currentLog']))
+              {
+                if($_POST['logFiles'] === $_SESSION['currentLog'])
+                {
+                  set_default_active_log();
+                }
+              }
+            }
+            else
+            {
+              print "Error deleting log entries: " . mysql_error() . "!<br/>";
+            }
+          }
+        }
+        ?>
+        <form action="logs.php" method="post" enctype="multipart/form-data">
+          Select log entries to delete:
+          <select name='logFiles'>
+            <?php
+            $logFiles = mysql_query("SELECT DISTINCT log_file FROM log_entry order by log_file");
+            while($logFile = mysql_fetch_array($logFiles, MYSQL_ASSOC))
+            {
+              echo "<option value=\"" . $logFile['log_file'] . "\">" . $logFile['log_file'] . "</option>\n";
+            }
+          ?>
+          </select>
+          <br />
+          <input type="submit" name="submitDelete" value="Delete" />
+        </form>
+        <br />
+      </p>
+
+      <p class="note">Select Active Log</p>
+      <p>
+        <?php
+        if ( isset($_POST['submitCurrentLog']) ) {
+          if($_POST['currentLog'] != "")
+          {
+            $_SESSION['currentLog'] = $_POST['currentLog'];
+            print "Current log set to '" . $_POST['currentLog'] . "'<br />";
+          }
+        }
+        ?>
+        <form action="logs.php" method="post" enctype="multipart/form-data">
+          Select log file to run metrics against:
+          <select name='currentLog'>
+            <?php
+            $logFiles = mysql_query("SELECT DISTINCT log_file FROM log_entry order by log_file");
+            while($logFile = mysql_fetch_array($logFiles, MYSQL_ASSOC))
+            {
+              // Make the current active log file be selected in the selection box.
+              if($_SESSION['currentLog'] == $logFile['log_file'])
+              {
+                echo "<option value=\"" . $logFile['log_file'] . "\" SELECTED>" . $logFile['log_file'] . "</option>\n";
+              }
+              else
+              {
+                echo "<option value=\"" . $logFile['log_file'] . "\">" . $logFile['log_file'] . "</option>\n";
+              }
+            }
+          ?>
+          </select>
+          <br />
+          <input type="submit" name="submitCurrentLog" value="Set Active Log" />
+        </form>
+        <br />
+      </p>
+	</div>
+	</div>
+  
+</body>
+</html>

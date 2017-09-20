@@ -1,0 +1,28 @@
+<html>
+<body>
+<?php
+//print ini_get( "upload_max_filesize" );
+//ini_set( "upload_max_filesize", "8M" );
+//print ini_get( "upload_max_filesize" );
+include( "utilities.php" );
+	$currentLogFile = get_active_log_file();
+	if ( $currentLogFile ) {
+		$p["file"] = $currentLogFile;
+		$counts = get_urls( $p );
+	}
+
+	foreach( $counts as $unique_id => $transaction) {
+		print "<table cellpadding=0 cellspacing=0>";
+		print "<tr><td colspan=2>$unique_id</td></tr>";
+
+		foreach( $counts[$unique_id] as $row ) {
+			print "<tr style='background-color: ";
+			if ( $row["status"] != "Status_OK" ) print "red;";
+			print "'><td>" . $row["status"] . "</td><td>" . $row["url"] . "</td></tr>";
+		}
+		print "</table>";
+		print "<br />";
+	}
+?>
+</body>
+</html>

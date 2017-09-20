@@ -1,0 +1,183 @@
+<?php
+    include( 'utilities.php' );      
+?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+	<title>Software QA and Testing</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
+	<style type="text/css" media="screen">@import "css/basic.css";</style>
+	<style type="text/css" media="screen">@import "css/tabs.css";</style>
+</head>
+
+<body>
+	<h1>Comp150B - Software QA and Testing</h1>
+  <div id="header">
+	<ul id="primary">
+		<li><a href="index.php">Home</a></li>
+		<li><a href="logs.php">Manage Log Files</a></li>
+		<li><a href="requests.php">Request Reliability</a></li>
+		<li><span>User Reliability</span></li>
+		<li><a href="misc.php">Request Timing</a></li>
+        <li><a href="transactions.php">Transaction Log</a></li>
+                 <li><a href="urlvisits.php">URL Visits</a></li>
+	</ul>
+	</div>
+	<div id="main">
+		<div id="contents">
+			<h2>User Reliability</h2>
+			<br />	
+			<p class="note">Mean Number of Transactions to Failure For Users</p>	
+			  <p>
+			  <?php
+			  $currentLogFile = get_active_log_file();
+      	      if(isset($currentLogFile))
+              {
+				$count = 0;
+              	$total = 0;
+                $query1 = "SELECT DISTINCT unique_id FROM log_entry WHERE status REGEXP '(4..|5..)' AND log_file='" . mysql_real_escape_string($currentLogFile) . "' ";
+                $result1 = mysql_query( $query1 );
+                  while($row1 = mysql_fetch_array($result1)){
+	            $query2 = "SELECT unique_id, date, time, status FROM log_entry WHERE unique_id ='" . mysql_real_escape_string($row1['unique_id']) . "' AND status REGEXP '(4..|5..)' AND log_file='" . mysql_real_escape_string($currentLogFile) . "' order by date, time LIMIT 1";
+                     $result2 = mysql_query( $query2 );
+                     while($row2 = mysql_fetch_array($result2)){  
+                       $query3 = "SELECT COUNT(row_num) FROM log_entry WHERE unique_id ='" . mysql_real_escape_string($row2['unique_id']) . "' AND date <= '" . $row2['date'] . "' AND time <= '" . $row2['date'] . "' AND log_file='" . mysql_real_escape_string($currentLogFile) . "' ";
+		        $result3 = mysql_query( $query3 );
+                        $row3 = mysql_fetch_array($result3, MYSQL_NUM);
+                        $total += $row3[0];
+		        $count++;
+	             }
+		  }
+                if ($count > 0) print "<b>" . ($total/$count) . "</b> Transactions in log file: " . $currentLogFile . "<br/>";
+                else print "No failures reported";
+              }
+              else
+              {
+                print "No Log File Selected!<br/>";
+              }
+			  ?>	
+			</p>
+			<br />
+		
+		  <p class="note">User Error Sequences to Failure</p>	
+	  <p>
+	    <?php
+			  $currentLogFile = get_active_log_file();
+      	      if(isset($currentLogFile))
+              {
+		$count = 0;
+                $query1 = "SELECT DISTINCT unique_id FROM log_entry WHERE status REGEXP '(4..|5..)' AND log_file='" . mysql_real_escape_string($currentLogFile) . "' order by date, time";
+                $result1 = mysql_query( $query1 );
+                while($row1 = mysql_fetch_array($result1)){
+                	$query2 = "SELECT unique_id, date, time, status  FROM log_entry WHERE unique_id ='" . mysql_real_escape_string($row1['unique_id']) . "' AND status REGEXP '(4..|5..)' AND log_file='" . mysql_real_escape_string($currentLogFile) . "' order by date, time LIMIT 1";
+                	$result2 = mysql_query( $query2 );
+                	while($row2 = mysql_fetch_array($result2)){
+                	  print "<table width= 700 class= 'user'>";
+                	  print "<tr><th align= left colspan= 2>" . $row2['unique_id'] . " Error Sequence</th></tr>";
+              	      print "<tr><th width= 500 >URL</th><th>Status</th></tr>";
+                      $query3 = "SELECT url, status FROM log_entry WHERE unique_id ='" . mysql_real_escape_string($row2['unique_id']) . "' AND date <= '" . $row2['date'] . "' AND time <= '" . $row2['time'] . "' AND log_file='" . mysql_real_escape_string($currentLogFile) . "' order by date, time";
+                	  $result3 = mysql_query( $query3 );
+			  $row_count=0;
+			  $result_array;
+                	  while($row3 = mysql_fetch_array( $result3 )) {
+			    $result_array[0][$row_count] = $row3['url'];
+			    $result_array[1][$row_count] = $row3['status'];
+			    $row_count++;
+                	  }
+			  if ($row_count < 10) {
+			    for ($i=0; $i<$row_count; $i++) {
+			      print "<tr><td>" . $result_array[0][$i] . "</td><td>" . $result_array[1][$i] . "</td></tr>";
+			    }
+			  }
+			  else {
+			    for ($i=($row_count - 10); $i<$row_count; $i++) {
+			      print "<tr><td>" . $result_array[0][$i] . "</td><td>" . $result_array[1][$i] . "</td></tr>";
+			    }
+			  }
+                	  print "</table><br/>";
+			  $count++; 
+            	    }
+                }
+                if ($count == 0) print "No failures reported";
+              }
+              else
+              {
+                print "No Log File Selected!<br/>";
+              }
+		?>	
+	  </p>		
+	  <br />
+	  		
+      <p class="note">Probability of No Failure For Users</p>
+      <p>
+        <p>
+        <?php
+          $currentLogFile = get_active_log_file();
+          if(isset($currentLogFile))
+          {
+            $query = "SELECT COUNT(distinct unique_id) FROM log_entry WHERE status REGEXP '(4..|5..)' AND log_file='" . mysql_real_escape_string($currentLogFile) . "'";
+            $result = mysql_query( $query );
+            $row = mysql_fetch_array($result, MYSQL_NUM);
+			$numDistinctSessionFailures = $row[0];
+			
+			$query = "SELECT COUNT(distinct unique_id) FROM log_entry WHERE log_file='" . mysql_real_escape_string($currentLogFile) . "'";
+            $result = mysql_query( $query );
+            $row = mysql_fetch_array($result, MYSQL_NUM);
+			$numDistinctSessions = $row[0];
+			//$numDistinctSessions = 3;
+			
+            print "<b>" . 100 * (1 - $numDistinctSessionFailures/$numDistinctSessions) . "%</b> probability of no failure for users in log file: " . $currentLogFile . "<br/>";
+            //print "numdistinct sessions" . $numDistinctSessions . "<br/>";
+			//print "numdistinct session failures". $numDistinctSessionFailures;
+          }
+          else
+          {
+            print "No Log File Selected!<br/>";
+          }
+        ?>
+      </p>
+      </p>
+      <br />
+      <p class="note">Probability of User Requests Terminating on a Failure</p>
+      <p>
+       <?php
+         $currentLogFile = get_active_log_file();
+         if(isset($currentLogFile))
+         {
+           $query1 = "SELECT unique_id, row_num FROM log_entry WHERE status REGEXP '(4..|5..)' AND log_file='" . mysql_real_escape_string($currentLogFile) . "'";
+           $result1 = mysql_query( $query1 );
+           $row1 = mysql_fetch_array($result1, MYSQL_NUM);
+
+           $numRows = mysql_num_rows($result1);
+           $numTerminatingOnFailure = 0;
+           $i=0;
+				while ($i < $numRows) {
+
+                       $query2 = "SELECT MAX(row_num) FROM log_entry WHERE log_file='" . mysql_real_escape_string($currentLogFile) . "' AND unique_id='" . mysql_real_escape_string(mysql_result($result1, $i,"unique_id")) . "'";
+                       $result2 = mysql_query( $query2 );
+					   $row2 = mysql_fetch_array($result2, MYSQL_NUM);
+                       $numLastRowOfFailedSession = $row2[0];
+
+                               if(mysql_result($result1, $i, "row_num") == $numLastRowOfFailedSession) {
+                                       $numTerminatingOnFailure += 1;
+									   //print "found a terminate on failure; num termianting on failure is now: " . $numTerminatingOnFailure . "<br/>";
+                               }
+				$i++;
+               }
+			   
+			    //print "num distinct sessions: " . $numDistinctSessions . "<br/>"; 
+
+           print "<b>" . 100 *($numTerminatingOnFailure/$numDistinctSessions) . "%</b> probability of user requests terminating after failure in log file: " . $currentLogFile . "<br/>";
+           //print "numterminatingonfailure sessions" . $numTerminatingOnFailure . "<br/>";
+         }
+         else
+         {
+           print "No Log File Selected!<br/>";
+         }
+       ?>
+      </p>
+		</div>
+	</div>
+  
+</body>
+</html>

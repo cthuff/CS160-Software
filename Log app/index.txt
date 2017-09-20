@@ -1,0 +1,47 @@
+<?php
+    include( 'utilities.php' );      
+?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+	<title>Software QA and Testing</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
+	<style type="text/css" media="screen">@import "css/basic.css";</style>
+	<style type="text/css" media="screen">@import "css/tabs.css";</style>
+</head>
+
+<body>
+	<h1>Comp150B - Software QA and Testing</h1>
+  <div id="header">
+	<ul id="primary">
+		<li><span>Home</span></li>
+		<li><a href="logs.php">Manage Log Files</a></li>
+		<li><a href="requests.php">Request Reliability</a></li>
+		<li><a href="users.php">User Reliability</a></li>
+		<li><a href="misc.php">Request Timing</a></li>
+        <li><a href="transactions.php">Transaction Log</a></li>
+		<li><a href="urlvisits.php">URL Visits</a></li>
+	</ul>
+	</div>
+	<div id="main">
+		<div id="contents">
+			<h2>Home</h2>
+			<br />	
+			<p class="note">Project Introduction</p>	
+			<p>
+			Welcome to COMP150B!</br>
+			This website was created as part of the COMP150 (Software Quality Assurance) class project which
+			aimed to allow students to fully experience, <b>with quality in mind</b>, the end-to-end design, implementation and testing of a software project.<br/><br/>
+			The creation of this site included an initial <b>requirements</b> phase which included interacting with the project customer (Professor Srikanth) and <b>project scoping</b> culminating in a formalized <b>requirements document</b>.<br/><br/>
+			The final list of requirements was then split into 2 separate phases of <b>design, implementation and testing</b> which included formalized <b>test cases</b> which are <b>traceable</b> to the original requirements. <br/><br/>
+			The site itself is a tool for gleaning metrics useful to testing the usability of websites. The website allows for users to upload HTTP log files in .csv (Comma Separated Values) file format to be analyzed on the server.<br/><br/>
+			To navigate the website, use the tabs found towards the top of the page.<br/>
+			Upload new log files or select uploaded log files for analysis on the "Manage Log Files" page. <br/>
+			Once a log file has been selected, all pages with metric information will reference the selected log file. <br/>
+			</p>
+			<br />
+		</div>
+	</div>
+  
+</body>
+</html>

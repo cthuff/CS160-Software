@@ -1,0 +1,233 @@
+<?php
+    // Make sure a session is started, and set the currently active log if it's not set yet.
+    session_start();
+    if(!isset($_SESSION['currentLog']))
+    {
+        set_default_active_log();
+    }
+
+    function set_default_active_log()
+    {
+        // The current log file is not set, so just choose the first one in the DB and set it.
+        // This code is typically only run when a) the user is first accessing the site and
+        // doesn't have an established session, or b) when the user has deleted all of the log
+        // entries in the DB, in which case this code will not find any log files in the DB
+        // and will keep the currentLog session variable 'unset'.
+        $query = "SELECT DISTINCT log_file FROM log_entry LIMIT 1";
+        $result = mysql_query($query);
+        $row = mysql_fetch_assoc($result);
+        if(sizeof($row) == 0)
+        {
+            unset($_SESSION['currentLog']);
+        }
+        else
+        {
+            $_SESSION['currentLog'] = $row['log_file'];
+        }
+    }
+    
+    function get_active_log_file() 
+    {
+		if (isset( $_SESSION['currentLog'] ) ) {
+			$row = mysql_fetch_assoc( mysql_query( "select * from log_entry where log_file = '" . $_SESSION['currentLog'] . "' limit 1" ) );
+			if ( !$row ) {
+				header('Location: logs.php?error=No records found in database.  Please select another log file.');
+			}
+		}
+
+		// Returns the active log file name, or null if it's not set.
+		return $_SESSION['currentLog'];
+    }
+
+    // Connect to the DB
+    $dbh=mysql_connect ("mysql-user", "dkiger01", "comp150b") or die('Cannot connect to the database because: ' . mysql_error());
+    mysql_select_db ("dkiger01");
+
+	function get_status_counts( $params ) {
+		$query  = "select distinct( status ) as type, count(status) as num, log_file, unique_id from log_entry ";
+
+		$where_clause = '';
+		if (isset($params["type"]))    $where_clause .= " and status    = '" . mysql_real_escape_string($params["type"])    . "'";
+		if (isset($params["session"])) $where_clause .= " and unique_id = '" . mysql_real_escape_string($params["session"]) . "'";
+		if (isset($params["file"]))    $where_clause .= " and log_file  = '" . mysql_real_escape_string($params["file"])    . "'";
+		$where_clause = preg_replace( '/^ and/', ' where', $where_clause );
+
+		$query .= $where_clause;
+		$query .= " group by log_file, unique_id, status";
+
+		$result = mysql_query( $query );
+
+		$ret_value;
+		while ($row = mysql_fetch_assoc($result)) {
+			$ret_value[$row["type"]][$row["unique_id"]] = $row;
+		}
+
+		return $ret_value;
+	}
+
+	function get_urls( $params ) {
+		$query  = "select unique_id, date, time, url, status, referrer from log_entry ";
+
+		$where_clause = '';
+		if (isset($params["session"])) $where_clause .= " and unique_id = '" . mysql_real_escape_string($params["session"]) . "'";
+		if (isset($params["file"]))    $where_clause .= " and log_file  = '" . mysql_real_escape_string($params["file"])    . "'";
+		$where_clause = preg_replace( '/^ and/', ' where', $where_clause );
+
+		$query .= $where_clause;
+		$query .= " order by date, time";
+
+		$result = mysql_query( $query );
+
+		$ret_value;
+		while ($row = mysql_fetch_assoc($result)) {
+			$row["referrer"] = preg_replace( '/[\n\r]/', '', $row["referrer"] );
+			if ( !preg_match( '/shindig/', $row["url"] ) && !preg_match( '/\.js/', $row["url"] ) ) {
+				$ret_value[$row["unique_id"]][] = $row;
+			}
+		}
+
+		return $ret_value;
+	}
+
+    function does_log_file_exist_in_db($logFileName)
+    {
+        $fileExists = false;
+
+        $query = "SELECT log_file FROM log_entry WHERE log_file='" . mysql_real_escape_string($logFileName) . "'";
+        $result = mysql_query($query);
+        $row = mysql_fetch_array($result, MYSQL_NUM);
+        if(isset($row[0]))
+        {
+            $fileExists = true;
+        }
+
+        return $fileExists;
+    }
+
+    function is_log_file_csv($logFileName)
+    {
+        $ext = substr($logFileName, strrpos($logFileName, '.') + 1);
+
+        return ($ext == "csv");
+    }
+
+    function is_row_blank($rowArray)
+    {
+    //    return ((!isset($rowArray[0]) || $rowArray[0] == "") &&
+     //           (!isset($rowArray[1]) || $rowArray[0] == "") &&
+    }
+
+    function validate_row_contents($origRow, $rowArray)
+    { 
+        // Make sure we have the right number of comma separated values
+        if(sizeof($rowArray) != 7)
+        {
+            $errorReturn = "Data Error: Failed to insert the following line because there are " . sizeof($rowArray);
+            $errorReturn .= " comma separated values instead of 7:<br/>";
+            $errorReturn .= $origRow . "<br/><br/>";
+            return $errorReturn;
+        }
+ 
+        // Make sure the ID is numeric
+        if(!is_numeric($rowArray[0]))
+        {
+            $errorReturn = "Data Error: Failed to insert the following line because the ID is non-numeric:<br/>";
+            $errorReturn .= $origRow . "<br/><br/>";
+            return $errorReturn;
+        }
+
+        // Make sure the Unique ID is not empty
+        if($rowArray[1] == "")
+        {
+            $errorReturn = "Data Error: Failed to insert the following line because the UniqueID is empty:<br/>";
+            $errorReturn .= $origRow . "<br/><br/>";
+            return $errorReturn;
+        }
+
+        // Make sure the date string is valid
+        $dateStr = str_replace(".","-",$rowArray[2]);
+	$dateStr = str_replace("/", "-", $dateStr);
+	if(!strtotime($dateStr))
+        {
+            $errorReturn = "Data Error: Failed to insert the following line because the date string is not valid:<br/>";
+            $errorReturn .= $origRow . "<br/><br/>";
+            return $errorReturn;
+        }
+
+	else
+	{
+		// Now we have to do an additional check to see if the date is valid.
+		// The above check won't check for 02/30/2010, for example.
+		$year = strtok($dateStr, "-");
+        	$month = strtok("-");
+        	$day = strtok("-");
+		//print $year . " " . $month . " " . $day . "<br/>";
+        	if(!checkdate($month, $day, $year))
+		{
+			$errorReturn = "Data Error: Failed to insert the following line because the date string is not valid:<br/>";
+            		$errorReturn .= $origRow . "<br/><br/>";
+            		return $errorReturn;
+		}
+	}
+
+
+        // Make sure the time string is valid
+        if(!strtotime($rowArray[3]))
+        {
+            $errorReturn = "Data Error: Failed to insert the following line because the time string is not valid:<br/>";
+            $errorReturn .= $origRow . "<br/><br/>";
+            return $errorReturn;
+        }
+
+        // Make sure the URL is not empty
+        if($rowArray[4] == "")
+        {
+            $errorReturn = "Data Error: Failed to insert the following line because the URL is empty:<br/>";
+            $errorReturn .= $origRow . "<br/><br/>";
+            return $errorReturn;
+        }
+
+        // Make sure the Status is not empty
+        if($rowArray[5] == "")
+        {
+            $errorReturn = "Data Error: Failed to insert the following line because the Status is empty:<br/>";
+            $errorReturn .= $origRow . "<br/><br/>";
+            return $errorReturn;
+        }
+
+        // Make sure the Referrer is not empty
+        if($rowArray[6] == "")
+        {
+            $errorReturn = "Data Error: Failed to insert the following line because the Referrer is empty:<br/>";
+            $errorReturn .= $origRow . "<br/><br/>";
+            return $errorReturn;
+        }
+
+        return $errorReturn;
+    }
+
+       function get_distinct_sessions_count()
+       {
+               if(isset($_SESSION['currentLog'])){
+                       
+                       $queryDSC = "SELECT COUNT(DISTINCT unique_id) FROM log_entry WHERE log_file='" . mysql_real_escape_string($_SESSION['currentLog']) . "'";
+                       $resultDSC = mysql_query($queryDSC);
+                       $rowDSC = mysql_fetch_array($resultDSC, MYSQL_NUM);                        
+               }
+               return mysql_num_rows($resultDSC);
+       }
+
+       function get_number_requests_count()
+       {
+               if(isset($_SESSION['currentLog'])){
+                       
+                       $queryNRC = "SELECT COUNT(unique_id) FROM log_entry WHERE log_file='" . mysql_real_escape_string($_SESSION['currentLog']) . "'";
+                       $resultNRC = mysql_query($queryNRC);
+                       $rowNRC = mysql_fetch_array($resultNRC, MYSQL_NUM);                        
+               }
+               return mysql_num_rows($resultNRC);
+       }
+ 
+
+?>
+

@@ -1,0 +1,86 @@
+<?php
+    include( 'utilities.php' );
+
+	$currentLogFile = get_active_log_file();
+	if ( $currentLogFile ) {
+		$p["file"] = $currentLogFile;
+		$counts = get_urls( $p );
+	}
+?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+        <title>Software QA and Testing</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
+        <style type="text/css" media="screen">@import "css/basic.css";</style>
+        <style type="text/css" media="screen">@import "css/tabs.css";</style>
+</head>
+
+<body>
+        <h1>Comp150B - Software QA and Testing</h1>
+  <div id="header">
+        <ul id="primary">
+                <li><a href="index.php">Home</a></li>
+                <li><a href="logs.php">Manage Log Files</a></li>
+                <li><a href="requests.php">Request Reliability</a></li>
+                <li><a href="users.php">User Reliability</a></li>
+                <li><a href="misc.php">Request Timing</a></li>
+                <li><span>Transaction Log</span></li>
+		<li><a href="urlvisits.php">URL Visits</a></li>
+        </ul>
+        </div>
+        <div id="main">
+                <div id="contents">
+                        <h2>Transaction Log</h2>
+                        <br />
+<?php
+	foreach( $counts as $unique_id => $transaction) {
+?>
+                        <p class="note"><?=$unique_id?></p>
+                        <p>
+		                <table cellpadding=0 cellspacing=0 class="transaction">
+							<tr><td><b>Date</b></td><td><b>Time</b></td><td><b>Status</b></td><td><b>URL</b></td><td><b>Referrer</b></td></tr>
+<?php
+		$previous    = '';
+		foreach( $counts[$unique_id] as $row ) {
+			$row["url"] = preg_replace( "/\?.*/", "", $row["url"] );
+			print "<tr style='background-color: ";
+			if ( $row["status"] != "Status_OK" ) print "#FFCCCC;";
+			else print "#FFFDF3;";
+			print "'><td>" . $row["date"] . "</td><td>" . $row["time"] . "</td><td>" . $row["status"] . "</td><td>" . $row["url"] . "</td><td>" . $row["referrer"] . "</td></tr>";
+			$transitions[$previous . "::" . $row["referrer"]][$row["url"]]++;
+			$previous = $row["url"];
+		}
+?>
+		                </table>
+		                </p>
+						<br />
+<?php
+	}
+?>
+                        <p class="note">Most Common Transitions</p>
+                        <p>
+		                <table cellpadding=0 cellspacing=0 class="transaction">
+							<tr><td><b>Prior URL</b></td><td><b>Referrer</b></td><td></td><td><b>URL</b></td><td><b>Occurrances</b></td></tr>
+<?php
+		foreach( $transitions as $ref => $row ) {
+			$max_seen = 0;
+			$holding = split( "::", $ref );
+			foreach( $row as $url => $count ) {
+				if ( $count > $max_seen ) {
+					$max_seen = $count;
+				}
+			}
+?>
+							<tr><td><?=$holding[0]?></td><td>[<?=$holding[1]?>]</td><td> =&gt; </td><td><?=$url?></td><td style="text-align:center;"><?=$max_seen?></td></tr>
+<?php
+		}
+?>
+						</table>
+						</p>
+                        <br />
+                </div>
+        </div>
+</body>
+</html>
+

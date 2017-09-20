@@ -1,0 +1,113 @@
+<?php
+    include( 'utilities.php' );      
+	$currentLogFile = get_active_log_file();
+	if ( $currentLogFile ) {
+		$p["file"] = $currentLogFile;
+		$counts = get_status_counts( $p );
+		ksort( $counts );
+	}
+?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+	<title>Software QA and Testing</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
+	<style type="text/css" media="screen">@import "css/basic.css";</style>
+	<style type="text/css" media="screen">@import "css/tabs.css";</style>
+</head>
+
+<body>
+	<h1>Comp150B - Software QA and Testing</h1>
+	<div id="header">
+		<ul id="primary">
+			<li><a href="index.php">Home</a></li>
+			<li><a href="logs.php">Manage Log Files</a></li>
+			<li><span>Request Reliability</span></li>
+			<li><a href="users.php">User Reliability</a></li>
+			<li><a href="misc.php">Request Timing</a></li>
+            <li><a href="transactions.php">Transaction Log</a></li>
+                         <li><a href="urlvisits.php">URL Visits</a></li>
+		</ul>
+	</div>
+	<div id="main">
+		<div id="contents">
+			<h2>Request Reliability</h2>
+			<br />	
+			<p class="note">4xx HTTP Errors</p>	
+			<p>
+			 <?php
+			 	if(isset($currentLogFile)) {
+					$found = false;
+					foreach( $counts as $type => $row ) {
+						if ( preg_match( "/4../", $type ) ) {
+							$found = true;
+							foreach( $row as $session => $details ) { $num4xxErrors[$type] += $details["num"]; }
+
+							print "<b>" . $num4xxErrors[$type] . "</b> " . $type .  " errors in log file: " . $currentLogFile . "<br/>";
+						}
+					}
+					if ( !$found ) { print "<b>0</b> 4xx errors in log file: " . $currentLogFile . "<br/>"; }
+				} else {	
+					print "No Log File Selected!<br/>";
+				}
+			?>
+			</p>
+			<br />
+			<p class="note">5xx HTTP Errors</p>
+			<p>
+			<?php
+				if(isset($currentLogFile)) {
+					$found = false;
+					foreach( $counts as $type => $row ) {
+						if ( preg_match( "/5../", $type ) ) {
+							$found = true;
+							foreach( $row as $session => $details ) { $num5xxErrors[$type] += $details["num"]; }
+
+							print "<b>" . $num5xxErrors[$type] . "</b> " . $type .  " errors in log file: " . $currentLogFile . "<br/>";
+						}
+					}
+					if ( !$found ) { print "<b>0</b> 5xx errors in log file: " . $currentLogFile . "<br/>"; }
+				} else {
+					print "No Log File Selected!<br/>";
+				}
+			?>
+			</p>
+			<br />
+			<p class="note">Status_OK HTTP Messages</p>
+			<p>
+			<?php
+	  			if(isset($currentLogFile)) {
+					$found = false;
+					foreach( $counts as $type => $row ) {
+						if ( preg_match( "/Status_OK/", $type ) ) {
+							$found = true;
+							foreach( $row as $session => $details ) { $numStatusOk[$type] += $details["num"]; }
+
+							print "<b>" . $numStatusOk[$type] . "</b> " . $type .  " messages in log file: " . $currentLogFile . "<br/>";
+						}
+					}
+					if ( !$found ) { print "<b>0</b> Status_OK messages in log file: " . $currentLogFile . "<br/>"; }
+				} else {
+					print "No Log File Selected!<br/>";
+				}
+			?>
+			</p>
+			<br />
+			<p class="note">Percent of Status_OK Messages</p>
+			<p>
+			<?php
+                                if(isset($currentLogFile))
+                                {
+		  	                $percentSuccessful = 100 * (array_sum($numStatusOk) / (array_sum($num4xxErrors) + array_sum($num5xxErrors) + array_sum($numStatusOk)));
+					print "<b>" . $percentSuccessful . "%</b> of requests were successful in log file: " . $currentLogFile . "<br/>";
+                                }
+                                else
+                                {
+                                        print "No Log File Selected!<br/>";
+                                }
+				?>
+			</p>
+		</div>
+	</div>
+</body>
+</html>

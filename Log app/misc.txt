@@ -1,0 +1,156 @@
+<?php
+    include( 'utilities.php' );      
+    include( 'graphs.inc.php' );
+    $currentLogFile = get_active_log_file();
+?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+	<title>Software QA and Testing</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
+	<style type="text/css" media="screen">@import "css/basic.css";</style>
+	<style type="text/css" media="screen">@import "css/tabs.css";</style>
+        <style type="text/css" media="screen">@import "css/tooltip.css";</style>
+        <script src="./javascript-utils.js"></script>
+</head>
+
+<body>
+	<h1>Comp150B - Software QA and Testing</h1>
+  <div id="header">
+	<ul id="primary">
+		<li><a href="index.php">Home</a></li>
+		<li><a href="logs.php">Manage Log Files</a></li>
+		<li><a href="requests.php">Request Reliability</a></li>
+		<li><a href="users.php">User Reliability</a></li>
+		<li><span>Request Timing</span></li>
+                <li><a href="transactions.php">Transaction Log</a></li>
+                <li><a href="urlvisits.php">URL Visits</a></li>
+	</ul>
+	</div>
+	<div id="main">
+	 <div id="contents"> <h2>Request Timing</h2> <br />	
+      <p class="note" onmouseover="tooltip.show('This metric shows the number of requests in the log file, broken down by time of day.', 200);"
+                      onmouseout="tooltip.hide();">Requests By Hour</p>
+      <p>
+        <?php
+          if(isset($currentLogFile))
+          {
+              $queryRBH =  "SELECT COUNT(time<'01:00:00' OR NULL) AS before1, ";
+              $queryRBH .= "COUNT(time<'02:00:00' OR NULL) AS before2, ";
+              $queryRBH .= "COUNT(time<'03:00:00' OR NULL) AS before3, ";
+              $queryRBH .= "COUNT(time<'04:00:00' OR NULL) AS before4, ";
+              $queryRBH .= "COUNT(time<'05:00:00' OR NULL) AS before5, ";
+              $queryRBH .= "COUNT(time<'06:00:00' OR NULL) AS before6, ";
+              $queryRBH .= "COUNT(time<'07:00:00' OR NULL) AS before7, ";
+              $queryRBH .= "COUNT(time<'08:00:00' OR NULL) AS before8, ";
+              $queryRBH .= "COUNT(time<'09:00:00' OR NULL) AS before9, ";
+              $queryRBH .= "COUNT(time<'10:00:00' OR NULL) AS before10, ";
+              $queryRBH .= "COUNT(time<'11:00:00' OR NULL) AS before11, ";
+              $queryRBH .= "COUNT(time<'12:00:00' OR NULL) AS before12, ";
+              $queryRBH .= "COUNT(time<'13:00:00' OR NULL) AS before13, ";
+              $queryRBH .= "COUNT(time<'14:00:00' OR NULL) AS before14, ";
+              $queryRBH .= "COUNT(time<'15:00:00' OR NULL) AS before15, ";
+              $queryRBH .= "COUNT(time<'16:00:00' OR NULL) AS before16, ";
+              $queryRBH .= "COUNT(time<'17:00:00' OR NULL) AS before17, ";
+              $queryRBH .= "COUNT(time<'18:00:00' OR NULL) AS before18, ";           
+              $queryRBH .= "COUNT(time<'19:00:00' OR NULL) AS before19, ";
+              $queryRBH .= "COUNT(time<'20:00:00' OR NULL) AS before20, ";
+              $queryRBH .= "COUNT(time<'21:00:00' OR NULL) AS before21, ";
+              $queryRBH .= "COUNT(time<'22:00:00' OR NULL) AS before22, ";
+              $queryRBH .= "COUNT(time<'23:00:00' OR NULL) AS before23, ";
+              $queryRBH .= "COUNT(time) AS totalRequests "; 
+              $queryRBH .= "FROM   log_entry WHERE log_file='";
+              $queryRBH .= $currentLogFile . "'";
+
+              $resultRBH = mysql_query($queryRBH);
+              $rowRBH = mysql_fetch_array($resultRBH, MYSQL_ASSOC);
+
+
+              $graph = new BAR_GRAPH("vBar");
+              $graphLabels = "12:00AM-12:59AM,1:00AM-1:59AM,2:00AM-2:59AM,3:00AM-3:59AM,4:00AM-4:59AM,";
+              $graphLabels .= "5:00AM-5:59AM,6:00AM-6:59AM,7:00AM-7:59AM,8:00AM-8:59AM,9:00AM-9:59AM,";
+              $graphLabels .= "10:00AM-10:59AM,11:00AM-11:59AM,12:00PM-12:59PM,1:00PM-1:59PM,2:00PM-2:59PM,";
+              $graphLabels .= "3:00PM-3:59PM,4:00PM-4:59PM,5:00PM-5:59PM,6:00PM-6:59PM,7:00PM-7:59PM,";
+              $graphLabels .= "8:00PM-8:59PM,9:00PM-9:59PM,10:00PM-10:59PM,11:00PM-11:59PM"; 
+              $graph->labels = $graphLabels;
+              $graphValues = $rowRBH['before1'] . "," . ($rowRBH['before2'] - $rowRBH['before1']) . ",";
+              $graphValues .= ($rowRBH['before3'] - $rowRBH['before2']) . "," . ($rowRBH['before4'] - $rowRBH['before3']) . ",";
+              $graphValues .= ($rowRBH['before5'] - $rowRBH['before4']) . "," . ($rowRBH['before6'] - $rowRBH['before5']) . ",";
+              $graphValues .= ($rowRBH['before7'] - $rowRBH['before6']) . "," . ($rowRBH['before8'] - $rowRBH['before7']) . ",";
+              $graphValues .= ($rowRBH['before9'] - $rowRBH['before8']) . "," . ($rowRBH['before10'] - $rowRBH['before9']) . ",";
+              $graphValues .= ($rowRBH['before11'] - $rowRBH['before10']) . "," . ($rowRBH['before12'] - $rowRBH['before11']) . ",";
+              $graphValues .= ($rowRBH['before13'] - $rowRBH['before12']) . "," . ($rowRBH['before14'] - $rowRBH['before13']) . ",";
+              $graphValues .= ($rowRBH['before15'] - $rowRBH['before14']) . "," . ($rowRBH['before16'] - $rowRBH['before15']) . ",";
+              $graphValues .= ($rowRBH['before17'] - $rowRBH['before16']) . "," . ($rowRBH['before18'] - $rowRBH['before17']) . ",";
+              $graphValues .= ($rowRBH['before19'] - $rowRBH['before18']) . "," . ($rowRBH['before20'] - $rowRBH['before19']) . ",";
+              $graphValues .= ($rowRBH['before21'] - $rowRBH['before20']) . "," . ($rowRBH['before22'] - $rowRBH['before21']) . ",";
+              $graphValues .= ($rowRBH['before23'] - $rowRBH['before22']) . "," . ($rowRBH['totalRequests'] - $rowRBH['before23']);
+              $graph->values = $graphValues;
+              $graph->showValues = 2; // Show only the absolute values (not percentages)
+              //$graph->legend = "Number of Requests";
+              $graph->labelSize = 8;
+              $graph->labelSpace = 0;
+              $graph->barWidth = 10;
+              $graph->barColors = "darkgray";
+              $graph->barBorder = "1px solid black";
+              $graph->labelBGColor = "#FFF3B3";
+              $graph->absValuesBGColor = "#FFF3B3";
+              echo $graph->create();
+	}
+	else
+        {
+            print "No log file selected!<br/>";
+        }
+	?>
+	</p>
+	<br/>
+	<p class="note" onmouseover="tooltip.show('This metric shows the number of requests in the log file, broken down by day of the week.', 200);"
+                      onmouseout="tooltip.hide();">Requests By Day
+	<p>
+	<?php
+
+	if(isset($currentLogFile))
+        {
+              // Now create the graph that displays the queries by day of the week.
+              $queryRBD =  "SELECT COUNT(DAYOFWEEK(date)=1 OR NULL) AS sundays, ";
+              $queryRBD .= "COUNT(DAYOFWEEK(date)=2 OR NULL) AS mondays, ";
+              $queryRBD .= "COUNT(DAYOFWEEK(date)=3 OR NULL) AS tuesdays, ";
+              $queryRBD .= "COUNT(DAYOFWEEK(date)=4 OR NULL) AS wednesdays, ";
+              $queryRBD .= "COUNT(DAYOFWEEK(date)=5 OR NULL) AS thursdays, ";
+              $queryRBD .= "COUNT(DAYOFWEEK(date)=6 OR NULL) AS fridays, ";
+              $queryRBD .= "COUNT(DAYOFWEEK(date)=7 OR NULL) AS saturdays ";
+              $queryRBD .= "FROM   log_entry WHERE log_file='";
+              $queryRBD .= $currentLogFile . "'";
+
+              $resultRBD = mysql_query($queryRBD);
+              $rowRBD = mysql_fetch_array($resultRBD, MYSQL_ASSOC);
+
+
+              $graphRBD = new BAR_GRAPH("vBar");
+              $graphLabels = "Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday";
+              $graphRBD->labels = $graphLabels;
+              $graphValues = $rowRBD['mondays'] . "," . $rowRBD['tuesdays'] . "," . $rowRBD['wednesdays'] . ",";
+              $graphValues .= $rowRBD['thursdays'] . "," . $rowRBD['fridays'] . "," . $rowRBD['saturdays'] . "," . $rowRBD['sundays'];
+              $graphRBD->values = $graphValues;
+              $graphRBD->showValues = 2;
+              $graphRBD->labelSize = 8;
+              $graphRBD->labelSpace = 0;
+              $graphRBD->barWidth = 10;
+              $graphRBD->barColors = "darkgray";
+              $graphRBD->barBorder = "1px solid black";
+              $graphRBD->labelBGColor = "#FFF3B3";
+              $graphRBD->absValuesBGColor = "#FFF3B3";
+              echo $graphRBD->create();
+          }
+          else
+          {
+              print "No log file selected!<br/>";
+          }
+        ?>
+      </p>
+      <br />
+		</div>
+	</div>
+  
+</body>
+</html>
